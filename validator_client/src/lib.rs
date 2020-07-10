@@ -25,8 +25,7 @@ use slot_clock::SlotClock;
 use slot_clock::SystemTimeSlotClock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::time::{delay_for, Duration};
-use types::EthSpec;
-use validator_dir::Manager as ValidatorManager;
+use types::{test_utils::generate_deterministic_keypair, EthSpec};
 use validator_store::ValidatorStore;
 
 /// The interval between attempts to contact the beacon node during startup.
@@ -76,17 +75,9 @@ impl<T: EthSpec> ProductionValidatorClient<T> {
             );
         }
 
-        let validator_manager = ValidatorManager::open(&config.data_dir)
-            .map_err(|e| format!("unable to read data_dir: {:?}", e))?;
-
-        let validators_result = if config.strict {
-            validator_manager.decrypt_all_validators(config.secrets_dir.clone(), Some(&log))
-        } else {
-            validator_manager.force_decrypt_all_validators(config.secrets_dir.clone(), Some(&log))
-        };
-
-        let validators = validators_result
-            .map_err(|e| format!("unable to decrypt all validator directories: {:?}", e))?;
+        let validators = (config.first_validator..=config.last_validator)
+            .map(generate_deterministic_keypair)
+            .collect::<Vec<_>>();
 
         info!(
             log,

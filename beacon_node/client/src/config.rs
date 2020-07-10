@@ -21,9 +21,6 @@ pub enum ClientGenesis {
     },
     /// Reads the genesis state and other persisted data from the `Store`.
     FromStore,
-    /// Connects to an eth1 node and waits until it can create the genesis state from the deposit
-    /// contract.
-    DepositContract,
     /// Loads the genesis state from SSZ-encoded `BeaconState` bytes.
     ///
     /// We include the bytes instead of the `BeaconState<E>` because the `EthSpec` type
@@ -33,7 +30,10 @@ pub enum ClientGenesis {
 
 impl Default for ClientGenesis {
     fn default() -> Self {
-        Self::DepositContract
+        Self::Interop {
+            validator_count: 0,
+            genesis_time: 0,
+        }
     }
 }
 
@@ -48,11 +48,6 @@ pub struct Config {
     pub testnet_dir: Option<PathBuf>,
     pub log_file: PathBuf,
     pub spec_constants: String,
-    /// If true, the node will use co-ordinated junk for eth1 values.
-    ///
-    /// This is the method used for the 2019 client interop in Canada.
-    pub dummy_eth1_backend: bool,
-    pub sync_eth1_chain: bool,
     /// A list of hard-coded forks that will be disabled.
     pub disabled_forks: Vec<String>,
     #[serde(skip)]
@@ -80,8 +75,6 @@ impl Default for Config {
             rest_api: <_>::default(),
             websocket_server: <_>::default(),
             spec_constants: TESTNET_SPEC_CONSTANTS.into(),
-            dummy_eth1_backend: false,
-            sync_eth1_chain: false,
             eth1: <_>::default(),
             disabled_forks: Vec::new(),
         }

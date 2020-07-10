@@ -1,11 +1,10 @@
 use beacon_chain::builder::PUBKEY_CACHE_FILENAME;
 use clap::ArgMatches;
-use clap_utils::BAD_TESTNET_DIR_MESSAGE;
+use clap_utils::{parse_required, BAD_TESTNET_DIR_MESSAGE};
 use client::{config::DEFAULT_DATADIR, ClientConfig, ClientGenesis};
 use eth2_libp2p::{Enr, Multiaddr};
 use eth2_testnet_config::Eth2TestnetConfig;
 use slog::{crit, info, Logger};
-use ssz::Encode;
 use std::fs;
 use std::net::{IpAddr, Ipv4Addr, ToSocketAddrs};
 use std::net::{TcpListener, UdpSocket};
@@ -240,30 +239,6 @@ pub fn get_config<E: EthSpec>(
             .map_err(|_| "ws-port is not a valid u16.")?;
     }
 
-    /*
-     * Eth1
-     */
-
-    // When present, use an eth1 backend that generates deterministic junk.
-    //
-    // Useful for running testnets without the overhead of a deposit contract.
-    if cli_args.is_present("dummy-eth1") {
-        client_config.dummy_eth1_backend = true;
-    }
-
-    // When present, attempt to sync to an eth1 node.
-    //
-    // Required for block production.
-    if cli_args.is_present("eth1") {
-        client_config.sync_eth1_chain = true;
-    }
-
-    // Defines the URL to reach the eth1 node.
-    if let Some(val) = cli_args.value_of("eth1-endpoint") {
-        client_config.sync_eth1_chain = true;
-        client_config.eth1.endpoint = val.to_string();
-    }
-
     if let Some(freezer_dir) = cli_args.value_of("freezer-dir") {
         client_config.freezer_db_path = Some(PathBuf::from(freezer_dir));
     }
@@ -314,6 +289,14 @@ pub fn get_config<E: EthSpec>(
         client_config.websocket_server.port = 0;
     }
 
+    let validator_count = parse_required(cli_args, "validator-count")?;
+    let genesis_time = parse_required(cli_args, "genesis-time")?;
+
+    client_config.genesis = ClientGenesis::Interop {
+        validator_count,
+        genesis_time,
+    };
+
     /*
      * Load the eth2 testnet dir to obtain some additional config values.
      */
@@ -330,17 +313,6 @@ pub fn get_config<E: EthSpec>(
 
     if let Some(mut boot_nodes) = eth2_testnet_config.boot_enr {
         client_config.network.boot_nodes.append(&mut boot_nodes)
-    }
-
-    if let Some(genesis_state) = eth2_testnet_config.genesis_state {
-        // Note: re-serializing the genesis state is not so efficient, however it avoids adding
-        // trait bounds to the `ClientGenesis` enum. This would have significant flow-on
-        // effects.
-        client_config.genesis = ClientGenesis::SszBytes {
-            genesis_state_bytes: genesis_state.as_ssz_bytes(),
-        };
-    } else {
-        client_config.genesis = ClientGenesis::DepositContract;
     }
 
     Ok(client_config)

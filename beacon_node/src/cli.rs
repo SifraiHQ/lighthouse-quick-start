@@ -179,30 +179,6 @@ pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true),
         )
 
-        /*
-         * Eth1 Integration
-         */
-        .arg(
-            Arg::with_name("eth1")
-                .long("eth1")
-                .help("If present the node will connect to an eth1 node. This is required for \
-                       block production, you must use this flag if you wish to serve a validator.")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name("dummy-eth1")
-                .long("dummy-eth1")
-                .conflicts_with("eth1")
-                .help("If present, uses an eth1 backend that generates static dummy data.\
-                      Identical to the method used at the 2019 Canada interop.")
-        )
-        .arg(
-            Arg::with_name("eth1-endpoint")
-                .long("eth1-endpoint")
-                .value_name("HTTP-ENDPOINT")
-                .help("Specifies the server for a web3 connection to the Eth1 chain. Also enables the --eth1 flag. Defaults to http://127.0.0.1:8545.")
-                .takes_value(true)
-        )
         .arg(
             Arg::with_name("slots-per-restore-point")
                 .long("slots-per-restore-point")
@@ -227,4 +203,13 @@ pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
                 .long("purge-db")
                 .help("If present, the chain database will be deleted. Use with caution.")
         )
+
+        .arg(Arg::with_name("validator-count")
+             .value_name("VALIDATOR_COUNT")
+             .required(true)
+             .help("The number of validators in the genesis state."))
+        .arg(Arg::with_name("genesis-time")
+             .value_name("GENESIS_TIME")
+             .required(true)
+             .help("The genesis time for the given state."))
 }

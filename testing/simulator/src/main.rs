@@ -18,7 +18,6 @@ extern crate clap;
 
 mod checks;
 mod cli;
-mod eth1_sim;
 mod local_network;
 mod no_eth1_sim;
 mod sync_sim;
@@ -36,13 +35,6 @@ fn main() {
 
     let matches = cli_app().get_matches();
     match matches.subcommand() {
-        ("eth1-sim", Some(matches)) => match eth1_sim::run_eth1_sim(matches) {
-            Ok(()) => println!("Simulation exited successfully"),
-            Err(e) => {
-                eprintln!("Simulation exited with error: {}", e);
-                std::process::exit(1)
-            }
-        },
         ("no-eth1-sim", Some(matches)) => match no_eth1_sim::run_no_eth1_sim(matches) {
             Ok(()) => println!("Simulation exited successfully"),
             Err(e) => {

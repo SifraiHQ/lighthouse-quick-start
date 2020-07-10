@@ -73,8 +73,6 @@ fn syncing_sim(
         validator_count: num_validators,
         genesis_time: genesis_time.as_secs(),
     };
-    beacon_config.dummy_eth1_backend = true;
-    beacon_config.sync_eth1_chain = true;
 
     beacon_config.network.enr_address = Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
 

@@ -16,18 +16,6 @@ pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
                 .default_value(&DEFAULT_HTTP_SERVER)
                 .takes_value(true),
         )
-        .arg(
-            Arg::with_name("secrets-dir")
-                .long("secrets-dir")
-                .value_name("SECRETS_DIRECTORY")
-                .help(
-                    "The directory which contains the password to unlock the validator \
-                    voting keypairs. Each password should be contained in a file where the \
-                    name is the 0x-prefixed hex representation of the validators voting public \
-                    key. Defaults to ~/.lighthouse/secrets.",
-                )
-                .takes_value(true),
-        )
         .arg(Arg::with_name("auto-register").long("auto-register").help(
             "If present, the validator client will register any new signing keys with \
                        the slashing protection database so that they may be used. WARNING: \
@@ -37,19 +25,23 @@ pub fn cli_app<'a, 'b>() -> App<'a, 'b> {
                        nodes using the same key. Automatically enabled unless `--strict` is specified",
         ))
         .arg(
-            Arg::with_name("strict")
-            .long("strict")
-            .help(
-                "If present, require that validator keypairs are unlocked and that auto-register \
-                is explicit before new validators are allowed to be used."
-            )
-        )
-        .arg(
             Arg::with_name("allow-unsynced")
                 .long("allow-unsynced")
                 .help(
                     "If present, the validator client will still poll for duties if the beacon
                       node is not synced.",
                 ),
+        )
+        .arg(
+            Arg::with_name("first-validator")
+                .value_name("VALIDATOR_INDEX")
+                .required(true)
+                .help("The first validator public key to be generated for this client."),
+        )
+        .arg(
+            Arg::with_name("last-validator")
+                .value_name("VALIDATOR_INDEX")
+                .required(true)
+                .help("The last validator public key to be generated for this client."),
         )
 }

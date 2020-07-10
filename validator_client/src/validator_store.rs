@@ -13,10 +13,8 @@ use types::{
     Attestation, BeaconBlock, ChainSpec, Domain, Epoch, EthSpec, Fork, Hash256, Keypair, PublicKey,
     SelectionProof, Signature, SignedAggregateAndProof, SignedBeaconBlock, SignedRoot, Slot,
 };
-use validator_dir::ValidatorDir;
 
 struct LocalValidator {
-    validator_dir: ValidatorDir,
     voting_keypair: Keypair,
 }
 
@@ -35,8 +33,7 @@ struct LocalValidator {
 /// It seems reasonable to make these two assumptions in order to avoid the equality checks.
 impl PartialEq for LocalValidator {
     fn eq(&self, other: &Self) -> bool {
-        self.validator_dir == other.validator_dir
-            && self.voting_keypair.pk == other.voting_keypair.pk
+        self.voting_keypair.pk == other.voting_keypair.pk
     }
 }
 
@@ -54,7 +51,7 @@ pub struct ValidatorStore<T, E: EthSpec> {
 
 impl<T: SlotClock + 'static, E: EthSpec> ValidatorStore<T, E> {
     pub fn new(
-        validators: Vec<(Keypair, ValidatorDir)>,
+        validators: Vec<Keypair>,
         config: &Config,
         genesis_validators_root: Hash256,
         spec: ChainSpec,
@@ -70,15 +67,9 @@ impl<T: SlotClock + 'static, E: EthSpec> ValidatorStore<T, E> {
                 )
             })?;
 
-        let validator_key_values = validators.into_iter().map(|(kp, dir)| {
-            (
-                kp.pk.clone(),
-                LocalValidator {
-                    validator_dir: dir,
-                    voting_keypair: kp,
-                },
-            )
-        });
+        let validator_key_values = validators
+            .into_iter()
+            .map(|kp| (kp.pk.clone(), LocalValidator { voting_keypair: kp }));
 
         Ok(Self {
             validators: Arc::new(RwLock::new(HashMap::from_iter(validator_key_values))),

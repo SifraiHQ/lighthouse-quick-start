@@ -76,8 +76,6 @@ pub fn testing_client_config() -> ClientConfig {
     client_config.websocket_server.enabled = true;
     client_config.websocket_server.port = 0;
 
-    client_config.dummy_eth1_backend = true;
-
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("should get system time")
@@ -171,7 +169,6 @@ impl<E: EthSpec> LocalValidatorClient<E> {
         files: ValidatorFiles,
     ) -> Result<Self, String> {
         config.data_dir = files.datadir.path().into();
-        config.secrets_dir = files.secrets_dir.path().into();
 
         ProductionValidatorClient::new(context, config)
             .await

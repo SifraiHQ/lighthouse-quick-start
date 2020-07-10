@@ -15,7 +15,7 @@ use environment::RuntimeContext;
 use eth1::{Config as Eth1Config, Service as Eth1Service};
 use eth2_config::Eth2Config;
 use eth2_libp2p::NetworkGlobals;
-use genesis::{interop_genesis_state, Eth1GenesisService};
+use genesis::interop_genesis_state;
 use network::{NetworkConfig, NetworkMessage, NetworkService};
 use parking_lot::Mutex;
 use slog::info;
@@ -153,26 +153,6 @@ where
             .custom_spec(spec.clone())
             .disabled_forks(disabled_forks);
 
-        let chain_exists = builder
-            .store_contains_beacon_chain()
-            .unwrap_or_else(|_| false);
-
-        // If the client is expect to resume but there's no beacon chain in the database,
-        // use the `DepositContract` method. This scenario is quite common when the client
-        // is shutdown before finding genesis via eth1.
-        //
-        // Alternatively, if there's a beacon chain in the database then always resume
-        // using it.
-        let client_genesis = if client_genesis == ClientGenesis::FromStore && !chain_exists {
-            info!(context.log(), "Defaulting to deposit contract genesis");
-
-            ClientGenesis::DepositContract
-        } else if chain_exists {
-            ClientGenesis::FromStore
-        } else {
-            client_genesis
-        };
-
         let (beacon_chain_builder, eth1_service_option) = match client_genesis {
             ClientGenesis::Interop {
                 validator_count,
@@ -194,32 +174,6 @@ where
                     .map_err(|e| format!("Unable to parse genesis state SSZ: {:?}", e))?;
 
                 builder.genesis_state(genesis_state).map(|v| (v, None))?
-            }
-            ClientGenesis::DepositContract => {
-                info!(
-                    context.log(),
-                    "Waiting for eth2 genesis from eth1";
-                    "eth1_endpoint" => &config.eth1.endpoint,
-                    "contract_deploy_block" => config.eth1.deposit_contract_deploy_block,
-                    "deposit_contract" => &config.eth1.deposit_contract_address
-                );
-
-                let genesis_service = Eth1GenesisService::new(
-                    config.eth1,
-                    context.log().clone(),
-                    context.eth2_config().spec.clone(),
-                );
-
-                let genesis_state = genesis_service
-                    .wait_for_genesis_state(
-                        Duration::from_millis(ETH1_GENESIS_UPDATE_INTERVAL_MILLIS),
-                        context.eth2_config().spec.clone(),
-                    )
-                    .await?;
-
-                builder
-                    .genesis_state(genesis_state)
-                    .map(|v| (v, Some(genesis_service.into_core_service())))?
             }
             ClientGenesis::FromStore => builder.resume_from_db().map(|v| (v, None))?,
         };

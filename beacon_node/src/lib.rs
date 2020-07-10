@@ -19,7 +19,7 @@ use beacon_chain::{
 use clap::ArgMatches;
 use config::get_config;
 use environment::RuntimeContext;
-use slog::{info, warn};
+use slog::warn;
 use std::ops::{Deref, DerefMut};
 use types::EthSpec;
 
@@ -92,30 +92,14 @@ impl<E: EthSpec> ProductionBeaconNode<E> {
 
         let builder = builder
             .beacon_chain_builder(client_genesis, client_config_1)
-            .await?;
-        let builder = if client_config.sync_eth1_chain && !client_config.dummy_eth1_backend {
-            info!(
-                log,
-                "Block production enabled";
-                "endpoint" => &client_config.eth1.endpoint,
-                "method" => "json rpc via http"
-            );
-            builder.caching_eth1_backend(client_config.eth1.clone())?
-        } else if client_config.dummy_eth1_backend {
-            warn!(
-                log,
-                "Block production impaired";
-                "reason" => "dummy eth1 backend is enabled"
-            );
-            builder.dummy_eth1_backend()?
-        } else {
-            info!(
-                log,
-                "Block production disabled";
-                "reason" => "no eth1 backend configured"
-            );
-            builder.no_eth1_backend()?
-        };
+            .await?
+            .dummy_eth1_backend()?;
+
+        warn!(
+            log,
+            "Block production impaired";
+            "reason" => "dummy eth1 backend is enabled"
+        );
 
         let (builder, events) = builder
             .system_time_slot_clock()?

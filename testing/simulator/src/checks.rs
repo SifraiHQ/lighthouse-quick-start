@@ -1,34 +1,6 @@
 use crate::local_network::LocalNetwork;
 use std::time::Duration;
-use types::{Epoch, EthSpec, Slot, Unsigned};
-
-/// Checks that all of the validators have on-boarded by the start of the second eth1 voting
-/// period.
-pub async fn verify_initial_validator_count<E: EthSpec>(
-    network: LocalNetwork<E>,
-    slot_duration: Duration,
-    initial_validator_count: usize,
-) -> Result<(), String> {
-    slot_delay(Slot::new(1), slot_duration).await;
-    verify_validator_count(network, initial_validator_count).await?;
-    Ok(())
-}
-
-/// Checks that all of the validators have on-boarded by the start of the second eth1 voting
-/// period.
-pub async fn verify_validator_onboarding<E: EthSpec>(
-    network: LocalNetwork<E>,
-    slot_duration: Duration,
-    expected_validator_count: usize,
-) -> Result<(), String> {
-    slot_delay(
-        Slot::new(E::SlotsPerEth1VotingPeriod::to_u64()),
-        slot_duration,
-    )
-    .await;
-    verify_validator_count(network, expected_validator_count).await?;
-    Ok(())
-}
+use types::{Epoch, EthSpec};
 
 /// Checks that the chain has made the first possible finalization.
 ///
@@ -46,12 +18,6 @@ pub async fn verify_first_finalization<E: EthSpec>(
 pub async fn epoch_delay(epochs: Epoch, slot_duration: Duration, slots_per_epoch: u64) {
     let duration = slot_duration * (epochs.as_u64() * slots_per_epoch) as u32 + slot_duration / 2;
     tokio::time::delay_for(duration).await
-}
-
-/// Delays for `slots`, plus half a slot extra.
-async fn slot_delay(slots: Slot, slot_duration: Duration) {
-    let duration = slot_duration * slots.as_u64() as u32 + slot_duration / 2;
-    tokio::time::delay_for(duration).await;
 }
 
 /// Verifies that all beacon nodes in the given network have a head state that has a finalized
@@ -80,47 +46,6 @@ pub async fn verify_all_finalized_at<E: EthSpec>(
         Err(format!(
             "Nodes are not finalized at epoch {}. Finalized epochs: {:?}",
             epoch, epochs
-        ))
-    } else {
-        Ok(())
-    }
-}
-
-/// Verifies that all beacon nodes in the given `network` have a head state that contains
-/// `expected_count` validators.
-async fn verify_validator_count<E: EthSpec>(
-    network: LocalNetwork<E>,
-    expected_count: usize,
-) -> Result<(), String> {
-    let validator_counts = {
-        let mut validator_counts = Vec::new();
-        for remote_node in network.remote_nodes()? {
-            let beacon = remote_node.http.beacon();
-
-            let head = beacon
-                .get_head()
-                .await
-                .map_err(|e| format!("Get head via http failed: {:?}", e))?;
-
-            let vc = beacon
-                .get_state_by_root(head.state_root)
-                .await
-                .map(|(state, _root)| state)
-                .map_err(|e| format!("Get state root via http failed: {:?}", e))?
-                .validators
-                .len();
-            validator_counts.push(vc);
-        }
-        validator_counts
-    };
-
-    if validator_counts
-        .iter()
-        .any(|count| *count != expected_count)
-    {
-        Err(format!(
-            "Nodes do not all have {} validators in their state. Validator counts: {:?}",
-            expected_count, validator_counts
         ))
     } else {
         Ok(())

@@ -79,8 +79,6 @@ pub fn run_no_eth1_sim(matches: &ArgMatches) -> Result<(), String> {
         validator_count: total_validator_count,
         genesis_time: genesis_time.as_secs(),
     };
-    beacon_config.dummy_eth1_backend = true;
-    beacon_config.sync_eth1_chain = true;
 
     beacon_config.network.enr_address = Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
 
